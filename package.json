@@ -9,6 +9,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check server/core.js && node --check server/index.js && node --check test/server-core.test.js && node --check test/server-plugin.test.js && node --check test/ui.logic.test.js && node --check ui/logic.mjs && node --input-type=module --check < ui/index.js"
+    "check": "node --check server/core.js && node --check server/index.js && node --check server/gateway-client.js && node --check server/binding-store.js && node --check server/secrets-binding.js && node --check test/server-core.test.js && node --check test/server-plan.test.js && node --check test/server-plugin.test.js && node --check test/server-connect.test.js && node --check test/server-b3.test.js && node --check test/gateway-client.connect.test.js && node --check test/gateway-client.query.test.js && node --check test/binding-store.test.js && node --check test/secrets-binding.test.js && node --check test/ui.logic.test.js && node --check test/ui.logic.b2.test.js && node --check test/ui.logic.b3.test.js && node --check test/ui.index.integration.test.js && node --check test/mock-gateway.test.js && node --check test/mock-gateway-patch.test.js && node --check tools/mock-gateway/server.mjs && node --check tools/mock-gateway/patch-test-instance.mjs && node --check ui/logic.mjs && node --input-type=module --check < ui/index.js"
   }
 }

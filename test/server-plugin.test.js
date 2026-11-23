@@ -14,6 +14,11 @@ test('plugin exports the loader-required info and init', () => {
     assert.equal(typeof plugin.init, 'function');
 });
 
+test('binding namespace constant targets the v3 name', () => {
+    const { BINDING_SECRET_KEY } = require('../server/core.js');
+    assert.equal(BINDING_SECRET_KEY, 'apercus_gateway');
+});
+
 test('init fails closed when the loader cwd is not a SillyTavern root', async () => {
     const previous = process.cwd();
     const projectRoot = path.resolve(__dirname, '..');

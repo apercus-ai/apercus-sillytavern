@@ -9,6 +9,36 @@
     overflow-wrap: anywhere;
 }
 
+/* 复用 ST 的 inline-drawer：标题栏可点击收起/展开，内容默认隐藏。 */
+.ag-drawer {
+    width: 100%;
+    max-width: 100%;
+}
+
+.ag-drawer .inline-drawer-header {
+    padding: 2px 5px;
+    min-width: 0;
+}
+
+.ag-drawer .ag-header {
+    flex: 1 1 auto;
+}
+
+.ag-drawer .inline-drawer-icon {
+    flex: none;
+    margin-left: 6px;
+}
+
+.ag-panel.inline-drawer-content {
+    margin-top: 4px;
+}
+
+/* 实机冒烟发现：ST 的 button/menu_button 类自带 display，会覆盖 [hidden] 的 UA 样式，
+   导致插件里 hidden=true 的按钮仍然可见。面板内统一强制隐藏。 */
+.ag-panel [hidden] {
+    display: none !important;
+}
+
 .ag-panel {
     box-sizing: border-box;
     width: 100%;
@@ -114,7 +144,11 @@
 
 .ag-btn {
     flex: none;
+    /* ST 的 .menu_button 基础样式是 width: min-content；配合本扩展的 overflow-wrap:anywhere
+       会把中文按钮压成逐字竖排。这里显式恢复自动宽度并禁止换行。 */
+    width: auto;
     max-width: 100%;
+    white-space: nowrap;
     padding: 3px 8px;
     font-size: 0.86em;
 }
@@ -139,6 +173,16 @@
     padding: 4px 6px;
     border-left: 3px solid #c99a3d;
     opacity: 1;
+}
+
+.ag-auth-block {
+    margin-bottom: 6px;
+}
+
+.ag-connect-hint {
+    flex: 1 1 100%;
+    font-size: 0.78em;
+    opacity: 0.75;
 }
 
 .ag-section-title {
@@ -232,6 +276,75 @@
     overflow-wrap: anywhere;
 }
 
+.ag-model-selectable {
+    cursor: pointer;
+}
+
+.ag-model-selectable:hover,
+.ag-model-selectable:focus-visible {
+    border-color: #7fb6d9;
+}
+
+.ag-model-current {
+    border-color: #7fb6d9;
+}
+
+.ag-key-row {
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(127, 127, 127, 0.3));
+    border-radius: 4px;
+    font-size: 0.86em;
+}
+
+.ag-key-current {
+    border-color: #7fb6d9;
+}
+
+.ag-key-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ag-key-name {
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.ag-key-masked {
+    font-family: inherit;
+    opacity: 0.85;
+    overflow-wrap: anywhere;
+}
+
+.ag-key-status {
+    font-size: 0.78em;
+    opacity: 0.9;
+}
+
+.ag-meter {
+    margin: 0 0 2px;
+    padding: 4px 6px;
+    border-left: 3px solid var(--SmartThemeBorderColor, rgba(127, 127, 127, 0.35));
+    font-size: 0.9em;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.ag-meter-ok { border-left-color: #4e9a6a; }
+.ag-meter-warn { border-left-color: #c99a3d; }
+.ag-meter-danger { border-left-color: #b45454; }
+
 .ag-boundary,
 .ag-version {
     margin: 6px 0 0;
@@ -316,4 +429,54 @@
     .ag-balance-row {
         flex-direction: column;
     }
+}
+
+/* B2 防截断分节 */
+.ag-antitrunc {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--SmartThemeBorderColor, rgba(127, 127, 127, 0.25));
+}
+
+.ag-antitrunc-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.86em;
+    line-height: 1.4;
+}
+
+.ag-antitrunc-state {
+    margin: 4px 0;
+    padding: 3px 6px;
+    border-left: 3px solid var(--SmartThemeBorderColor, rgba(127, 127, 127, 0.45));
+    font-size: 0.84em;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.ag-antitrunc-state-valid { border-left-color: #4e9a6a; }
+.ag-antitrunc-state-stale,
+.ag-antitrunc-state-failed { border-left-color: #c99a3d; }
+.ag-antitrunc-state-guard { border-left-color: #b45454; }
+.ag-antitrunc-state-empty { border-left-color: var(--SmartThemeBorderColor, #888); }
+
+.ag-antitrunc-note {
+    margin: 4px 0;
+    font-size: 0.82em;
+    line-height: 1.45;
+    color: #c99a3d;
+    overflow-wrap: anywhere;
+}
+
+.ag-antitrunc-sections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 2px 0 4px;
+    min-width: 0;
+}
+
+.ag-chip-section {
+    font-size: 0.78em;
 }

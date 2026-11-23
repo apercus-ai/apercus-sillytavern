@@ -14,6 +14,8 @@ const PLUGIN_STATUS = {
     code: 'pass_binding_unavailable',
     message: 'Pass 绑定接口尚未接通',
     protocols: { chat: false, anthropic: false, responses: false },
+    state: 'not_connected',
+    st_connection: { state: 'unknown' },
 };
 
 const BALANCE = {
@@ -140,6 +142,79 @@ test('status: contract booleans are strict and disconnected protocols are unusab
     assert.equal(L.parseStatus({ ...PLUGIN_STATUS, authAvailable: null }).ok, false);
 });
 
+test('status v3: four states, optional username, and st_connection are strict', () => {
+    const authorized = L.parseStatus({
+        ...PLUGIN_STATUS,
+        state: 'authorized',
+        username: 'alice',
+        st_connection: { state: 'unknown' },
+    });
+    assert.equal(authorized.ok, true);
+    assert.equal(authorized.value.state, 'authorized');
+    assert.equal(authorized.value.username, 'alice');
+    assert.equal(L.isAuthorized(authorized), true);
+
+    for (const state of ['not_connected', 'pending', 'invalid']) {
+        const parsed = L.parseStatus({ ...PLUGIN_STATUS, state });
+        assert.equal(parsed.ok, true, state);
+        assert.equal(L.isAuthorized(parsed), false, state);
+    }
+
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, state: 'connected' }).ok, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, state: undefined }).ok, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, state: 'authorized', username: 42 }).ok, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, state: 'invalid', reason: '' }).ok, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, st_connection: null }).ok, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, st_connection: { state: 'yes' } }).ok, false);
+    // W1：connect_pending 可缺省（旧服务端=false），存在时必须是布尔。
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS }).value.connect_pending, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, state: 'authorized', connect_pending: true }).value.connect_pending, true);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, connect_pending: 'true' }).ok, false);
+    // W10：local_cleared 同口径，可缺省；只在 invalid/login_invalidated 时有意义。
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS }).value.local_cleared, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, state: 'invalid', local_cleared: true }).value.local_cleared, true);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, local_cleared: 'yes' }).ok, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS }).value.custom_cleared, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, state: 'invalid', custom_cleared: true }).value.custom_cleared, true);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, custom_cleared: 'yes' }).ok, false);
+    assert.equal(L.parseStatus({ ...PLUGIN_STATUS, connected: false, authAvailable: false }).ok, true);
+    assert.equal(L.isAuthorized({ ok: false }), false);
+});
+
+test('connect status parser accepts exactly four states and a valid username', () => {
+    for (const status of ['connecting', 'pending', 'authorized', 'invalid']) {
+        const parsed = L.parseConnectStatus({ status });
+        assert.equal(parsed.ok, true, status);
+        assert.equal(parsed.value.status, status);
+        assert.equal(parsed.value.username, null);
+    }
+    const withName = L.parseConnectStatus({ status: 'authorized', username: 'alice' });
+    assert.equal(withName.ok, true);
+    assert.equal(withName.value.username, 'alice');
+
+    assert.equal(L.parseConnectStatus({ status: 'bound' }).ok, false);
+    assert.equal(L.parseConnectStatus({ status: 'authorized', username: '' }).ok, false);
+    assert.equal(L.parseConnectStatus({ status: 'authorized', username: 7 }).ok, false);
+    assert.equal(L.parseConnectStatus(null).ok, false);
+});
+
+test('gateway authorize URLs require https, the fixed host, no credentials, and the default port', () => {
+    assert.equal(L.isGatewayAuthorizeUrl('https://gw.apercus.ai/portal/connect?request_ref=x'), true);
+    assert.equal(L.isGatewayAuthorizeUrl('https://gw.apercus.ai:443/authorize'), true);
+    for (const url of [
+        'http://gw.apercus.ai/authorize',
+        'https://api.apercus.ai/authorize',
+        'https://gw.apercus.ai.evil.example/authorize',
+        'https://evil.example/gw.apercus.ai',
+        'https://user:pass@gw.apercus.ai/authorize',
+        'https://gw.apercus.ai:8443/authorize',
+        'not a url',
+        '',
+    ]) {
+        assert.equal(L.isGatewayAuthorizeUrl(url), false, url);
+    }
+});
+
 test('balance: needs_refresh is highlighted and never merged into a single usable number', () => {
     const parsed = L.parseBalance({ ...BALANCE, needs_refresh: true });
     assert.equal(parsed.ok, true);
@@ -228,7 +303,19 @@ test('UI source keeps remote data as text and persists no credentials', () => {
     assert.equal(/localStorage|sessionStorage/.test(uiSource), false);
     assert.match(uiSource, /\.textContent/);
     assert.match(uiSource, /ctx\.getRequestHeaders/);
-    assert.equal(/Authorization/.test(uiSource), false);
+    assert.equal(/Authorization|Bearer/.test(uiSource), false);
     assert.equal(/credentials\s*:/.test(uiSource), false);
-    assert.equal(/api_key|Bearer|secret value/i.test(uiSource), false);
+    // B3 文案可以提到服务端写入 api_key_custom，但 UI 自身绝不写 secret 或 key。
+    assert.equal(/api_key_custom\s*=/.test(uiSource), false);
+    assert.equal(/settings\.api_key/.test(uiSource), false);
+    assert.equal(/writeSecret|readSecret/.test(uiSource), false);
+});
+
+test('version declarations only claim source-checked SillyTavern 1.17.0 (U9)', () => {
+    for (const file of ['index.js', 'logic.mjs']) {
+        const source = fs.readFileSync(path.join(__dirname, '..', 'ui', file), 'utf8');
+        assert.equal(source.includes('1.16.0'), false, file);
+        assert.match(source, /1\.17\.0/, file);
+        assert.equal(/已验收|验收通过|supports 1\.19|支持 1\.19/.test(source), false, file);
+    }
 });
